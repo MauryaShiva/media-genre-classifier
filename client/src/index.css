@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+/* Global smooth transitions */
+html {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+body {
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* High contrast mode */
+html.high-contrast {
+  filter: contrast(1.15) saturate(1.1);
+}
