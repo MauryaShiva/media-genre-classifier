@@ -24,6 +24,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   animationsEnabled,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // New state for player
   const [result, setResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,20 @@ const FileUpload: React.FC<FileUploadProps> = ({
       setHistory(JSON.parse(savedHistory));
     }
   }, []);
+
+  // Handle Preview URL creation and cleanup
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+
+    // Cleanup to prevent memory leaks
+    return () => URL.revokeObjectURL(url);
+  }, [selectedFile]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -55,8 +70,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       has_audio: data.has_audio,
       timestamp: Date.now(),
     };
-
-    const updatedHistory = [newItem, ...history].slice(0, 10); // Keep last 10
+    const updatedHistory = [newItem, ...history].slice(0, 10);
     setHistory(updatedHistory);
     localStorage.setItem("genre_history", JSON.stringify(updatedHistory));
   };
@@ -66,34 +80,22 @@ const FileUpload: React.FC<FileUploadProps> = ({
       setError("Please select a media file first.");
       return;
     }
-
     setIsLoading(true);
     setError(null);
     setResult(null);
 
     const formData = new FormData();
     formData.append("media_file", selectedFile);
-
     const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/v1/classify-media`;
 
     try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        body: formData,
-      });
-
+      const response = await fetch(apiUrl, { method: "POST", body: formData });
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Failed to classify media.");
-      }
-
+      if (!response.ok) throw new Error(data.detail || "Failed to classify.");
       setResult(data);
-      if (data.genre || data.has_audio === false) {
-        addToHistory(data);
-      }
+      if (data.genre || data.has_audio === false) addToHistory(data);
     } catch (err: any) {
-      setError(err.message || "Something went wrong on the server.");
+      setError(err.message || "Something went wrong.");
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +121,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             fill="transparent"
             stroke="#eef2ff"
             strokeWidth={strokeWidth}
+            className="dark:stroke-gray-800"
           />
           {data.map((item: any, index: number) => {
             const pct = Math.max(0, Math.min(1, item.confidence || 0));
@@ -136,7 +139,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 strokeDashoffset={-offset}
                 strokeLinecap="round"
                 className={
-                  animationsEnabled ? "transition-all duration-700" : ""
+                  animationsEnabled
+                    ? "transition-all duration-700 ease-out"
+                    : ""
                 }
               />
             );
@@ -149,7 +154,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
           y="50%"
           textAnchor="middle"
           dominantBaseline="middle"
-          style={{ fontWeight: 700, fill: "#4C1D95", fontSize: 18 }}
+          className="font-bold fill-violet-700 dark:fill-violet-400"
+          style={{ fontSize: 18 }}
         >
           Top 3
         </text>
@@ -158,14 +164,23 @@ const FileUpload: React.FC<FileUploadProps> = ({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50 dark:bg-black transition-colors">
-      {/* ---------- LEFT SIDEBAR: History (Now Sticky) ---------- */}
+    <div className="flex flex-col lg:flex-row min-h-screen bg-transparent transition-colors duration-500">
+      {/* ---------- CUSTOM ANIMATIONS ---------- */}
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
+
+      {/* ---------- LEFT SIDEBAR: History ---------- */}
       <aside
-        className="w-full lg:w-80 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-6 
-                   lg:sticky lg:top-[73px] lg:h-[calc(100vh-73px)] overflow-y-auto"
+        className="w-full lg:w-80 bg-white dark:bg-[#0f0f0f] border-r border-gray-200 dark:border-gray-800 p-6 
+                   lg:sticky lg:top-[73px] lg:h-[calc(100vh-73px)] overflow-y-auto transition-colors duration-500"
       >
         <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center gap-2">
-          <span>🕒</span> Recent History
+          <span className="text-violet-600 dark:text-violet-400">🕒</span>{" "}
+          Recent History
         </h3>
 
         {history.length === 0 ? (
@@ -178,143 +193,192 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <button
                 key={item.id}
                 onClick={() => setResult(item)}
-                className={`w-full text-left p-3 rounded-xl border transition-all ${
+                className={`w-full text-left p-3 rounded-xl border transition-all duration-300 ${
                   result?.id === item.id
-                    ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20"
-                    : "border-gray-100 dark:border-gray-800 hover:border-violet-300 dark:hover:border-violet-700 bg-gray-50 dark:bg-gray-800/50"
+                    ? "border-violet-500 bg-violet-50 dark:bg-violet-900/30"
+                    : "border-gray-100 dark:border-gray-800 hover:border-violet-300 dark:hover:border-violet-600 bg-gray-50 dark:bg-gray-800/40"
                 }`}
               >
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate font-mono">
                   {item.filename}
                 </p>
                 <div className="flex justify-between items-center mt-1">
-                  <span className="font-bold text-gray-900 dark:text-white capitalize">
+                  <span className="font-bold text-gray-900 dark:text-gray-100 capitalize">
                     {item.genre || "No Audio"}
                   </span>
-                  <span className="text-xs font-bold text-violet-600">
+                  <span className="text-xs font-bold text-violet-600 dark:text-violet-400">
                     {Math.round(item.confidence * 100)}%
                   </span>
                 </div>
               </button>
             ))}
-            <button
-              onClick={() => {
-                setHistory([]);
-                localStorage.removeItem("genre_history");
-              }}
-              className="w-full mt-4 text-xs text-red-500 hover:underline"
-            >
-              Clear History
-            </button>
           </div>
         )}
       </aside>
 
       {/* ---------- MAIN CONTENT ---------- */}
       <div className="flex-1 p-8">
-        <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-xl w-full max-w-3xl mx-auto transition-colors">
-          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-6 text-center">
+        <div className="bg-white dark:bg-[#121212] p-8 rounded-2xl shadow-xl w-full max-w-3xl mx-auto border border-transparent dark:border-gray-800 transition-all duration-500">
+          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-6 text-center tracking-tight">
             Media Genre Classifier
           </h2>
 
-          <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-6 text-center hover:border-violet-500 transition-colors">
+          {/* Upload Area */}
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-8 text-center hover:border-violet-500 dark:hover:border-violet-500 transition-all bg-gray-50 dark:bg-gray-900/20">
             <input
               type="file"
               accept="audio/*,video/*"
               onChange={handleFileChange}
               className="block w-full text-sm text-gray-600 dark:text-gray-300
-                file:mr-4 file:py-2 file:px-4
+                file:mr-4 file:py-2 file:px-6
                 file:rounded-full file:border-0
-                file:text-sm file:font-semibold
-                file:bg-white file:text-violet-700
-                hover:file:bg-violet-50 cursor-pointer"
+                file:text-sm file:font-bold
+                file:bg-violet-600 file:text-white
+                hover:file:bg-violet-700 cursor-pointer shadow-md transition-all"
             />
-            {selectedFile && (
-              <p className="text-gray-700 dark:text-gray-300 mt-4 break-all">
-                <span className="font-semibold">Selected:</span>{" "}
-                {selectedFile.name}
-              </p>
-            )}
           </div>
 
-          <div className="mt-6">
+          {/* ---------- MEDIA PREVIEW PLAYER ---------- */}
+          {selectedFile && previewUrl && (
+            <div
+              className={`mt-6 p-5 bg-violet-50 dark:bg-gray-900/40 rounded-xl border border-violet-100 dark:border-gray-800 ${animationsEnabled ? "animate-fade-in" : ""}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-widest">
+                  Media Preview
+                </span>
+                <span className="text-[10px] text-gray-400 font-mono truncate max-w-[200px]">
+                  {selectedFile.name}
+                </span>
+              </div>
+
+              <div className="overflow-hidden rounded-lg shadow-inner bg-black/5 dark:bg-black/20">
+                {selectedFile.type.startsWith("video/") ? (
+                  <video
+                    src={previewUrl}
+                    controls
+                    className="w-full max-h-[300px] object-contain"
+                  />
+                ) : (
+                  <div className="p-4 flex flex-col items-center">
+                    <span className="text-4xl mb-2">🎵</span>
+                    <audio src={previewUrl} controls className="w-full" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8">
             <button
               onClick={handleSubmit}
               disabled={isLoading || !selectedFile}
-              className={`w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-violet-700
-                hover:from-violet-700 hover:to-violet-800 text-white font-semibold
-                rounded-lg disabled:opacity-60 disabled:cursor-not-allowed shadow-sm
-                ${animationsEnabled ? "transition-all duration-200" : ""}
+              className={`w-full py-4 px-6 bg-gradient-to-r from-violet-600 to-violet-800
+                hover:from-violet-700 hover:to-violet-900 text-white font-bold
+                rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg
+                ${animationsEnabled ? "hover:scale-[1.01] active:scale-[0.98] transition-all" : ""}
               `}
             >
-              {isLoading ? "Analyzing Media..." : "Classify Genre"}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                "Classify Genre"
+              )}
             </button>
           </div>
 
           {error && (
-            <div className="mt-4 p-3 bg-red-50 border-l-4 border-red-600 text-red-700 text-center rounded">
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 text-red-700 dark:text-red-400 text-center rounded-lg animate-fade-in">
               {error}
             </div>
           )}
 
+          {/* Result Section */}
           {result && (
             <div
-              className={`mt-8 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${animationsEnabled ? "animate-in fade-in slide-in-from-bottom-4 duration-500" : ""}`}
+              className={`mt-10 p-8 bg-white dark:bg-[#1a1a1a] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-2xl ${animationsEnabled ? "animate-slide-up" : ""}`}
             >
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
-                Classification Result
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center justify-between">
+                <span>Classification Result</span>
+                <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">
+                  {result.filename}
+                </span>
               </h3>
-              <p className="text-gray-800 dark:text-gray-300 mb-4">
-                <span className="font-semibold">File:</span> {result.filename}
-              </p>
 
               {noAudioDetected ? (
-                <div className="text-center py-6 px-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-dashed border-violet-300">
-                  <p className="text-3xl mb-2">🎧</p>
-                  <h4 className="text-lg font-bold mb-2">No Audio Detected</h4>
+                <div className="text-center py-10 px-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-dashed border-violet-300 dark:border-violet-700">
+                  <p className="text-5xl mb-4">🎧</p>
+                  <h4 className="text-xl font-bold mb-2 dark:text-white">
+                    No Audio Detected
+                  </h4>
                   <p className="text-gray-600 dark:text-gray-400">
-                    This video does not contain sound.
+                    This file does not contain sound.
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-between mb-8 pb-6 border-b dark:border-gray-800">
                     <div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Detected Genre
+                      <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
+                        Genre
                       </div>
-                      <div className="text-2xl font-extrabold capitalize">
+                      <div className="text-4xl font-black text-violet-700 dark:text-violet-400 capitalize">
                         {result.genre}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
                         Confidence
                       </div>
-                      <div className="text-xl font-bold text-violet-700">
+                      <div className="text-2xl font-bold dark:text-white">
                         {Math.round(result.confidence * 100)}%
                       </div>
                     </div>
                   </div>
+
                   {showCharts && result.top_3_genres && (
-                    <div className="flex flex-col md:flex-row items-center gap-6">
-                      <div>{renderDonutChart()}</div>
-                      <div className="w-full md:w-2/3 space-y-3">
+                    <div className="flex flex-col md:flex-row items-center gap-10">
+                      <div
+                        className={`${animationsEnabled ? "hover:scale-105 transition-transform" : ""}`}
+                      >
+                        {renderDonutChart()}
+                      </div>
+                      <div className="w-full md:w-2/3 space-y-4">
                         {result.top_3_genres.map((item: any, index: number) => (
                           <div
                             key={item.genre}
-                            className="bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border dark:border-gray-700 flex justify-between items-center"
+                            className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border dark:border-gray-800 flex justify-between items-center group hover:border-violet-400 transition-all"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                               <span
-                                className="w-3 h-3 rounded-full"
+                                className="w-4 h-4 rounded-full shadow-sm"
                                 style={{ backgroundColor: COLORS[index] }}
                               />
-                              <span className="capitalize font-medium text-gray-900 dark:text-gray-100">
+                              <span className="capitalize font-bold text-gray-700 dark:text-gray-300">
                                 {index + 1}. {item.genre}
                               </span>
                             </div>
-                            <span className="font-semibold text-violet-700">
+                            <span className="font-black text-violet-700 dark:text-violet-400">
                               {Math.round(item.confidence * 100)}%
                             </span>
                           </div>
