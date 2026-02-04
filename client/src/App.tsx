@@ -59,13 +59,14 @@ function App() {
 
   return (
     <div
-      className={`min-h-screen transition-colors
+      className={`min-h-screen 
         bg-gray-100 text-gray-900
-        dark:bg-gray-950 dark:text-gray-100
+        dark:bg-black dark:text-gray-100
         ${compactLayout ? "text-sm" : "text-base"}
-        ${animationsEnabled ? "transition-all duration-300" : ""}
+        /* Removed transition-all from root to prevent layout jitter */
       `}
     >
+      {/* Fixed/Sticky Header */}
       <Header
         darkMode={darkMode}
         setDarkMode={setDarkMode}
@@ -79,9 +80,12 @@ function App() {
         setAnimationsEnabled={setAnimationsEnabled}
       />
 
-      <main
-        className={`mx-auto max-w-5xl px-4 ${compactLayout ? "py-4" : "py-8"}`}
-      >
+      {/* IMPORTANT FIX: 
+          1. Removed 'transition-all' from <main>. 
+          Layout-affecting transitions on parent containers break 'sticky' positioning.
+          2. Container is now full-width to accommodate the Sidebar flow.
+      */}
+      <main className="mx-auto w-full max-w-[1600px]">
         <FileUpload
           showCharts={showCharts}
           animationsEnabled={animationsEnabled}
