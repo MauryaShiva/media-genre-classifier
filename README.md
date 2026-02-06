@@ -27,7 +27,7 @@ GenreLab is a high-performance web application that uses Deep Learning (CNN) to 
 ### 1. Clone the Repository
 
 ```bash
-git clone [https://github.com/MauryaShiva/media-genre-classifier.git]
+git clone https://github.com/MauryaShiva/media-genre-classifier.git
 cd media-genre-classifier
 
 ```

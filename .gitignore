@@ -19,3 +19,38 @@ client/.DS_Store
 # OS specific
 .DS_Store
 Thumbs.db
+
+training/__pycache__/
+training/*.pyc
+training/*.log
+training/.env*
+training/.DS_Store
+
+# Virtual Environment (if created inside training)
+training/venv/
+training/.venv/
+
+# Jupyter Notebook checkpoints
+training/.ipynb_checkpoints/
+
+# Dataset (VERY IMPORTANT — do not upload)
+training/data/
+training/datasets/
+training/genres_original/
+
+# Model outputs (optional — keep ignored unless you want to version models)
+training/*.pth
+training/models/
+training/checkpoints/
+
+# Temporary / cache
+training/tmp/
+training/cache/
+training/runs/
+training/wandb/
+
+# Large files
+*.h5
+*.ckpt
+*.pt
+*.onnx
