@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "@/components/Header";
-import FileUpload from "@/components/FileUpload";
-
+import FileUpload from "@/components/FileUpload/FileUpload";
 /* ---------- localStorage helpers ---------- */
 const getStoredBoolean = (key: string, defaultValue: boolean) => {
   const stored = localStorage.getItem(key);
