@@ -1,216 +1,107 @@
-Got you, Shiva. Below is your content properly converted into a clean **GitHub `README.md` format**. You can directly copy-paste this into `README.md`.
+# 🧠 GenreLab: Model Training & Architecture
+
+This document provides a detailed overview of the Deep Learning pipeline used to power the **GenreLab** classification engine.
 
 ---
 
-```md
-# 🧠 GenreLab — Model Training Guide
+## ✅ Pre-Trained Model Included
 
-This document explains how the **GenreLab Deep Learning model** was trained and how you can reproduce or retrain it yourself.
+**Important:** You do **not** need to run this training code to use GenreLab. A high-performance, pre-trained model file (`music_genre_model.pth`) is already included in the `server/music_genre_model.pth` directory for immediate use.
 
----
+Only follow the steps below if you wish to:
 
-## ⚠️ Important Notice
+1. Retrain the model with a custom dataset.
+2. Experiment with different CNN architectures.
+3. Verify the research methodology.
 
-A **pre-trained model is already included** in this repository:
-```
+## 📊 Dataset: GTZAN Genre Collection
 
-server/music_genre_model.pth
+The model is trained on the industry-standard **GTZAN Dataset**, the most famous public dataset for Music Genre Classification (MGC).
 
-```
-
-You **DO NOT need to train the model** to run the application.
-
-Only train if you want to:
-
-- Retrain with custom dataset
-- Improve accuracy
-- Experiment with architecture
-- Reproduce research
+- **Dataset Source:** [Kaggle - GTZAN Dataset](https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification)
+- **Content:** 1,000 audio tracks (30 seconds each).
+- **Genres (10 classes):** Blues, Classical, Country, Disco, Hiphop, Jazz, Metal, Pop, Reggae, and Rock.
 
 ---
 
-## 📊 Dataset — GTZAN Music Genre Dataset
+## 🛠️ Training Workflow
 
-GenreLab is trained using the **GTZAN Dataset**, a standard benchmark for **Music Genre Classification**.
+The training process is optimized for **Google Colab** using GPU acceleration.
 
-**Download Dataset:**
+### 1. Preprocessing (Feature Extraction)
 
-https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification
+We do not feed raw audio into the CNN. Instead, we convert audio signals into visual representations:
 
-### Dataset Details
+- **Audio Loading:** Tracks are sampled at **22,050 Hz**.
+- **Mel Spectrograms:** Generated using `librosa`, converting power to a log scale (decibels) to create a "heat map" of frequencies over time.
+- **Normalization:** Spectrograms are resized to a consistent **128x128** pixel shape.
 
-- 1000 audio files
-- Each file = 30 seconds
-- 10 Genres:
+### 2. CNN Model Architecture
 
-```
+The engine uses a Custom Convolutional Neural Network (CNN) implemented in **PyTorch**:
 
-Blues
-Classical
-Country
-Disco
-Hiphop
-Jazz
-Metal
-Pop
-Reggae
-Rock
+| Layer       | Type            | Details                         |
+| :---------- | :-------------- | :------------------------------ |
+| **Conv1**   | Convolutional   | 32 Filters, 3x3 Kernel          |
+| **Pool**    | Max Pooling     | 2x2 Stride                      |
+| **Conv2**   | Convolutional   | 64 Filters, 3x3 Kernel          |
+| **Conv3**   | Convolutional   | 128 Filters, 3x3 Kernel         |
+| **FC1**     | Fully Connected | 512 Neurons with ReLU           |
+| **Dropout** | Regularization  | 0.5 Rate (Prevents Overfitting) |
+| **FC2**     | Output Layer    | 10 Classes (Softmax ready)      |
 
-```
+### 3. Hyperparameters
 
----
-
-## 📂 Dataset Folder Setup (IMPORTANT)
-
-After downloading, extract dataset into:
-
-```
-
-training/genres_original/
-
-```
-
-Final structure must look like:
-
-```
-
-training/
-├── genres_original/
-│ ├── blues/
-│ ├── classical/
-│ ├── country/
-│ ├── disco/
-│ ├── hiphop/
-│ ├── jazz/
-│ ├── metal/
-│ ├── pop/
-│ ├── reggae/
-│ └── rock/
-
-```
+- **Optimizer:** Adam ($\alpha = 0.001$)
+- **Loss Function:** Cross-Entropy Loss
+- **Epochs:** 50
+- **Batch Size:** Dynamic based on memory
 
 ---
 
-## 🧩 Training Environment
+## 🚀 How to Train On Google Colab (Recommended for GPU Access)
 
-Training can run on:
-
-- Google Colab (**Recommended**)
-- Local Machine (CPU/GPU)
-
-**Python Version:**
-
-```
-
-Python 3.10+
-
-````
+1. **Upload to Colab:** Open the `training/train_model.ipynb` in [Google Colab](https://colab.research.google.com/).
+2. **Mount Google Drive:** Ensure your dataset is stored in `/MyDrive/Colab_Datasets/Data/genres_original`.
+3. **Execute Training:** Run all cells to process features and begin the training loop.
+4. **Export Model:** The script will output `music_genre_model.pth`. Move this file to the `server/music_genre_model.pth` directory of the main project.
 
 ---
 
-## 📦 Install Training Dependencies
+## 🚀 How to Train On a Local Machine (Recommended for Desktop)
 
-From project root:
+**Navigate to Training Directory**
+Open your terminal inside the `training/` folder.
 
 ```bash
 cd training
-pip install -r requirements_training.txt
-````
+```
 
----
-
-## 🚀 Start Training
-
-Run:
+### Setup Virtual Environment
 
 ```bash
-python train_model.py
+python -m venv venv
 ```
 
-Training will:
+**Windows**
 
-- Load dataset
-- Convert audio → Mel Spectrogram
-- Train CNN model
-- Evaluate accuracy
-- Save trained model
-
----
-
-## 💾 Model Output
-
-After training completes:
-
-```
-music_genre_model.pth
+```bash
+venv\Scripts\activate
 ```
 
-Move this file into:
+**Linux / Mac**
 
+```bash
+source venv/bin/activate
 ```
-server/music_genre_model.pth
+
+**Install Dependencies**
+
+```bash
+pip install -r requirements_training.txt
 ```
 
-This file is used by the **FastAPI backend**.
-
----
-
-## 🏗️ Model Architecture
-
-GenreLab uses a **Custom CNN (PyTorch)**:
-
-| Layer   | Type           | Details          |
-| ------- | -------------- | ---------------- |
-| Conv1   | Conv2D         | 32 filters, 3x3  |
-| Pool    | MaxPool        | 2x2              |
-| Conv2   | Conv2D         | 64 filters, 3x3  |
-| Conv3   | Conv2D         | 128 filters, 3x3 |
-| FC1     | Dense          | 512 neurons      |
-| Dropout | Regularization | 0.5              |
-| FC2     | Output         | 10 classes       |
-
----
-
-## ⚙️ Training Configuration
-
-- Optimizer: **Adam**
-- Learning Rate: **0.001**
-- Loss Function: **CrossEntropy**
-- Epochs: **50**
-- Input: **128×128 Mel Spectrogram**
-
----
-
-## 📈 Training Output
-
-During training you will see:
-
-- Loss decreasing
-- Accuracy increasing
-- Final accuracy printed in terminal
-- Graph of Loss vs Accuracy
-
----
-
-## 💡 Tips for Better Accuracy
-
-- Train for more epochs (70–100)
-- Use GPU (**Colab T4 recommended**)
-- Normalize audio
-- Add data augmentation
-- Increase dataset size
-
----
-
-## ❌ Dataset Not Included
-
-The dataset (~1.1GB) is **NOT included** due to GitHub size limits.
-
-You must download manually from Kaggle and place in:
-
-```
-training/genres_original/
-```
+**Run Script :** Execute `python train_model.py` to start the local training process.
 
 ---
 
@@ -219,13 +110,7 @@ training/genres_original/
 MIT License
 Copyright (c) 2026 Shiva Maurya
 
----
+👨‍💻 Author
 
-## 👨‍💻 Author
-
-**Shiva Maurya**
+Shiva Maurya
 GenreLab — AI Media Classification Engine
-
-```
-
-```
