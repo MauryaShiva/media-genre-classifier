@@ -178,7 +178,7 @@ source venv/bin/activate
 pip install -r requirements_training.txt
 ```
 
-**Run Training :** Execute python `train_model.py` to start the local training process.
+**Run Script :** Execute `python train_model.py` to start the local training process.
 
 ---
 
